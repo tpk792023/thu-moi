@@ -73,6 +73,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .card .frame{position:absolute;inset:0;width:100%;height:100%}
 .c-in{position:absolute;inset:84px 82px 74px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:calc(9px*var(--fs))}
 .card[data-frame="hoa"] .c-in,.card[data-frame="goc"] .c-in{inset:96px 82px 132px}
+.card[data-frame="deco"] .c-in{inset:96px 82px 92px}
+.card[data-frame="song"] .c-in{inset:128px 66px 128px}
+.card[data-frame="vom"] .c-in{inset:118px 80px 60px}
+.card[data-frame="vui"] .c-in{inset:92px 76px 84px}
 .c-unit{font-family:var(--f-ui);font-weight:600;font-size:calc(13px*var(--fs));letter-spacing:.14em;text-transform:uppercase;white-space:pre-line}
 .c-title{font-family:var(--f-title);font-weight:700;font-size:calc(58px*var(--fs));line-height:1.05;letter-spacing:.07em;color:var(--c-primary);margin-top:calc(4px*var(--fs))}
 .c-sub{font-family:var(--f-script);font-weight:700;font-size:calc(27px*var(--fs));line-height:1.2;color:var(--c-ink);text-wrap:balance;max-width:420px}
@@ -152,6 +156,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <label class="btn up-btn" for="f-file">Lấy danh sách từ file Word / Excel</label>
         <input type="file" id="f-file" accept=".xlsx,.xls,.csv,.docx" hidden>
         <p class="up-hint">Excel: cột <b>Họ và tên</b>, hoặc tách 2–3 cột <b>Họ (đệm)</b> · <b>Tên</b>; thêm cột <b>Danh xưng</b>/<b>Giới tính</b>, <b>Chức vụ</b> nếu có. Word: bảng có cột như trên, hoặc mỗi dòng một tên. Danh sách mới sẽ thay danh sách đang có.</p>
+        <button class="btn" type="button" id="clearList">Xóa danh sách</button>
         <p class="status" id="up-status" role="status"></p>
       </div>
       <label>Nội dung<textarea id="f-noiDung" rows="5"></textarea></label>
@@ -218,7 +223,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     <p class="status" id="m-status">Đang tạo ảnh…</p>
     <div class="gal" id="m-imgs"></div>
     <p style="color:var(--muted);font-size:13px">Lưu từng ảnh: máy tính nhấn chuột phải vào ảnh, chọn <b>Lưu hình ảnh thành…</b>; điện thoại nhấn giữ ảnh rồi chọn <b>Lưu ảnh</b>. Nút <b>Tải PDF</b> gộp mọi thư vào một file A5 để in; nếu nút không tải được khi xem trong Claude, hãy mở bản HTML trên máy tính bằng Chrome/Edge.</p>
-    <div class="actions"><button class="btn" type="button" id="m-pdf" hidden>Tải PDF</button><button class="btn primary" type="button" id="m-close">Đóng</button></div>
+    <div class="actions"><button class="btn" type="button" id="m-pdf" hidden>Tải PDF</button><button class="btn" type="button" id="m-clear" hidden>Xóa danh sách</button><button class="btn primary" type="button" id="m-close">Đóng</button></div>
   </div>
 </div>
 
@@ -240,7 +245,8 @@ const PALS={
 };
 const FRAMES=[
   {id:'codien',name:'Cổ điển'},{id:'hoa',name:'Hoa mai'},{id:'kyha',name:'Hoa văn'},
-  {id:'la',name:'Cành lá'},{id:'goc',name:'Góc màu'}
+  {id:'la',name:'Cành lá'},{id:'goc',name:'Góc màu'},
+  {id:'deco',name:'Art Deco'},{id:'song',name:'Sóng màu'},{id:'vom',name:'Khung vòm'},{id:'vui',name:'Hình vui'}
 ];
 const SCHOOL_SIGN='HIỆU TRƯỞNG';
 const THEMES=[
@@ -345,6 +351,31 @@ function frameSVG(id,p){
     let spr='';for(let i=0;i<5;i++){const dx=16+i*15;[1,-1].forEach(sd=>{const x=300+sd*dx;spr+=`<ellipse cx="${x}" cy="${26-5}" rx="8" ry="3.4" fill="${p.primary}" transform="rotate(${sd*-25} ${x} 21)"/><ellipse cx="${x}" cy="${26+5}" rx="8" ry="3.4" fill="${p.primary}" transform="rotate(${sd*25} ${x} 31)"/>`})}
     spr+=`<circle cx="300" cy="26" r="6" fill="${p.accent}" stroke="${p.paper}" stroke-width="2"/>`;
     s+=`<g>${spr}</g><g transform="translate(0 ${H}) scale(1 -1)">${spr}</g>`;
+  } else if(id==='deco'){
+    s+=rect(16,p.primary,2)+rect(24,p.accent,1);
+    const pt=(cx,cy,r,a)=>{const R=a*Math.PI/180;return `${(cx+r*Math.cos(R)).toFixed(1)} ${(cy+r*Math.sin(R)).toFixed(1)}`};
+    const arc=(cx,cy,r,a0,a1)=>`M${pt(cx,cy,r,a0)}A${r} ${r} 0 0 1 ${pt(cx,cy,r,a1)}`;
+    const fan=(cx,cy,a0,a1,r1,r2)=>{let d='';for(let i=0;i<=8;i++){const a=a0+(a1-a0)*i/8;d+=`M${pt(cx,cy,16,a)}L${pt(cx,cy,r1,a)}`}
+      return `<path d="${d}" stroke="${p.accent}" stroke-width="1.1"/><path d="${arc(cx,cy,r1,a0,a1)}${arc(cx,cy,r2,a0,a1)}" fill="none" stroke="${p.primary}" stroke-width="2"/><path d="${arc(cx,cy,16,a0,a1)}L${cx} ${cy}Z" fill="${p.primary}"/>`};
+    s+=c4(fan(24,24,0,90,72,90)+`<path d="M24 120V104M120 24H104" stroke="${p.primary}" stroke-width="2"/>`);
+    s+=fan(300,24,0,180,40,52)+fan(300,H-24,180,360,40,52);
+  } else if(id==='song'){
+    const wv=(base,amp,ph,k)=>{let d='M0 0';for(let x=0;x<=W;x+=10)d+=`L${x} ${(base+amp*Math.sin(x/W*Math.PI*2*k+ph)).toFixed(1)}`;return d+`L${W} 0Z`};
+    const g=`<path d="${wv(100,12,1.2,1.1)}" fill="${p.soft}"/><path d="${wv(76,13,2.6,1.3)}" fill="${p.accent}"/><path d="${wv(52,11,.3,1)}" fill="${p.primary}"/>`;
+    s+=`<g>${g}</g><g transform="translate(${W} ${H}) scale(-1 -1)">${g}</g>`;
+    s+=`<rect x="28" y="120" width="${W-56}" height="${H-240}" rx="16" fill="none" stroke="${p.accent}" stroke-width="1.6" stroke-dasharray="1 7" stroke-linecap="round"/>`;
+  } else if(id==='vom'){
+    s+=`<path fill-rule="evenodd" fill="${p.primary}" d="M0 0H${W}V${H}H0Z M40 812V290A260 260 0 0 1 560 290V812Z"/>`;
+    s+=`<path d="M54 798V290A246 246 0 0 1 546 290V798Z" fill="none" stroke="${p.accent}" stroke-width="1.4"/>`;
+    const star=(x,y,r)=>`<path d="M${x} ${y-r}Q${x} ${y} ${x+r} ${y}Q${x} ${y} ${x} ${y+r}Q${x} ${y} ${x-r} ${y}Q${x} ${y} ${x} ${y-r}Z" fill="${p.accent}"/>`;
+    s+=star(22,44,13)+star(578,44,13)+star(18,86,6)+star(582,86,6)+star(300,831,10)+star(272,831,5)+star(328,831,5);
+  } else if(id==='vui'){
+    s+=`<rect x="22" y="22" width="${W-44}" height="${H-44}" rx="20" fill="none" stroke="${p.primary}" stroke-width="1.6"/>`;
+    const zig=(x,y,n,col)=>{let d=`M${x} ${y}`;for(let i=0;i<n;i++)d+=`l10 ${i%2?10:-10}`;return `<path d="${d}" fill="none" stroke="${col}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`};
+    let dots='';for(let r=0;r<3;r++)for(let c=0;c<4;c++)dots+=`<circle cx="${40+c*12}" cy="${150+r*12}" r="2.6" fill="${p.primary}"/>`;
+    const g1=`<circle cx="52" cy="54" r="22" fill="${p.accent}"/><circle cx="118" cy="34" r="10" fill="none" stroke="${p.primary}" stroke-width="3.5"/><path d="M14 98L44 92L30 120Z" fill="${p.primary}"/>${zig(150,48,5,p.primary)}<rect x="210" y="28" width="12" height="12" fill="${p.soft}" stroke="${p.accent}" stroke-width="2" transform="rotate(20 216 34)"/>`;
+    const g2=`${dots}<path d="M30 48a18 18 0 0 1 36 0Z" fill="${p.primary}"/><circle cx="92" cy="40" r="5" fill="${p.accent}"/>${zig(110,30,4,p.accent)}<circle cx="30" cy="96" r="9" fill="none" stroke="${p.accent}" stroke-width="3"/>`;
+    s+=c2(g1)+`<g transform="translate(${W} 0) scale(-1 1)">${g2}</g><g transform="translate(0 ${H}) scale(1 -1)">${g2}</g>`;
   } else {
     s+=rect(20,p.primary,1.2,'stroke-opacity=".55"');
     let dots='';for(let r=0;r<4;r++)for(let c=0;c<6;c++)dots+=`<circle cx="${W-44-c*13}" cy="${40+r*13}" r="2.6" fill="${p.primary}" fill-opacity=".35"/>`;
@@ -527,6 +558,23 @@ $('f-file').addEventListener('change',async e=>{
   e.target.value='';
 });
 
+/* ---------- xóa danh sách (bấm 2 lần để chắc chắn) ---------- */
+function armClear(btn,msgEl){
+  let timer=null;const label=btn.textContent;
+  btn.addEventListener('click',()=>{
+    if(!names().length){msgEl.textContent='Danh sách đang trống.';return}
+    if(!btn.dataset.armed){
+      btn.dataset.armed='1';btn.textContent='Bấm lần nữa để xóa '+names().length+' tên';
+      timer=setTimeout(()=>{delete btn.dataset.armed;btn.textContent=label},4000);return;
+    }
+    clearTimeout(timer);delete btn.dataset.armed;btn.textContent=label;
+    const n=names().length;state.f.kinhGui='';state.idx=0;$('f-kinhGui').value='';render();
+    const msg=`Đã xóa ${n} tên. Có thể nạp danh sách mới.`;$('up-status').textContent=msg;msgEl.textContent=msg;
+  });
+}
+armClear($('clearList'),$('up-status'));
+armClear($('m-clear'),$('m-status'));
+
 /* ---------- xuất ảnh / PDF ---------- */
 let shots=[];
 async function shoot(){
@@ -537,7 +585,7 @@ async function shoot(){
 }
 async function exportLetters(all){
   const m=$('modal'),gal=$('m-imgs'),st=$('m-status');
-  m.hidden=false;gal.innerHTML='';$('m-pdf').hidden=true;shots=[];$('m-close').focus();
+  m.hidden=false;gal.innerHTML='';$('m-pdf').hidden=true;$('m-clear').hidden=true;shots=[];$('m-close').focus();
   if(!window.html2canvas){st.textContent='Chưa tải được công cụ chụp ảnh. Kiểm tra kết nối mạng rồi tải lại trang.';return}
   const n=names(),keep=state.idx,list=all&&n.length?n.map((_,i)=>i):[state.idx];
   gal.classList.toggle('single',list.length===1);
@@ -553,7 +601,7 @@ async function exportLetters(all){
       fig.append(img,cap);gal.append(fig);
     }
     st.textContent=list.length>1?`Đã tạo ${list.length} thư mời.`:'Ảnh đã sẵn sàng.';
-    $('m-pdf').hidden=!window.jspdf;
+    $('m-pdf').hidden=!window.jspdf;$('m-clear').hidden=!names().length;
   }catch(err){st.textContent='Không tạo được ảnh: '+err.message}
   state.idx=keep;render();
 }
