@@ -151,7 +151,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       <div class="upload">
         <label class="btn up-btn" for="f-file">Lấy danh sách từ file Word / Excel</label>
         <input type="file" id="f-file" accept=".xlsx,.xls,.csv,.docx" hidden>
-        <p class="up-hint">Excel: cột có tiêu đề <b>Họ và tên</b> (thêm cột <b>Danh xưng</b>, <b>Chức vụ</b> nếu có). Word: bảng có cột như trên, hoặc mỗi dòng một tên. Danh sách mới sẽ thay danh sách đang có.</p>
+        <p class="up-hint">Excel: cột <b>Họ và tên</b>, hoặc tách 2–3 cột <b>Họ (đệm)</b> · <b>Tên</b>; thêm cột <b>Danh xưng</b>/<b>Giới tính</b>, <b>Chức vụ</b> nếu có. Word: bảng có cột như trên, hoặc mỗi dòng một tên. Danh sách mới sẽ thay danh sách đang có.</p>
         <p class="status" id="up-status" role="status"></p>
       </div>
       <label>Nội dung<textarea id="f-noiDung" rows="5"></textarea></label>
@@ -417,35 +417,76 @@ const norm=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
 const cleanName=s=>norm(s).replace(/^(\d+\s*[\.\)\-:]|[-•*–+])\s*/,'').trim();
 const isNum=s=>/^\d+([.,]\d+)?$/.test(norm(s));
 function rowsToNames(rows){
-  rows=rows.map(r=>r.map(norm)).filter(r=>r.some(Boolean));
+  rows=rows.map(r=>r.map(norm));
+  rows=rows.filter(r=>r.some(Boolean));
   if(!rows.length)return [];
-  let hdr=-1,cName=-1,cPre=-1,cRole=-1;
-  const strong=/(họ\s*(và)?\s*tên|^tên\b|^name$)/,weak=/^(khách mời|đại biểu|người được mời|kính gửi|người nhận)/;
-  const isHdr=c=>c.length<40&&!/^danh sách/i.test(c);
-  let found=false;
-  for(const re of [strong,weak]){
-    for(let i=0;i<Math.min(8,rows.length)&&!found;i++){
-      const j=rows[i].findIndex(c=>isHdr(c)&&re.test(c.toLowerCase()));
-      if(j>=0){found=true;hdr=i;cName=j}
+  const H=c=>norm(c).toLowerCase().replace(/[:*]+$/,'').trim();
+  // phân loại một ô tiêu đề
+  const kind=c=>{
+    const l=H(c);if(!l||l.length>45||/^danh sách/.test(l))return '';
+    if(/^(họ\s*(và|&)?\s*(tên\s*)?(đệm|lót)|họ\s*(và\s*)?chữ\s*lót|họ)$/.test(l))return 'ho';
+    if(/^(chữ lót|tên đệm|tên lót|đệm|lót)$/.test(l))return 'mid';
+    if(/^(tên|tên gọi|tên riêng|first name)$/.test(l))return 'ten';
+    if(/họ\s*(và|&|,)?\s*tên|^tên\s+(học sinh|giáo viên|khách|đại biểu|người)|^full\s*name$|^name$/.test(l))return 'full';
+    if(/^(khách mời|đại biểu|người được mời|kính gửi|người nhận|thành phần)/.test(l))return 'weak';
+    if(/(danh xưng|xưng hô|giới tính|^phái$)/.test(l))return 'pre';
+    if(/(chức vụ|chức danh|đơn vị|cơ quan|nơi công tác)/.test(l))return 'role';
+    return '';
+  };
+  const find=(row,k)=>row?row.findIndex(c=>kind(c)===k):-1;
+  const textCol=(j,from)=>{ // tỉ lệ dòng dữ liệu có chữ (không phải số) ở cột j
+    const d=rows.slice(from,from+40);if(!d.length)return 0;
+    return d.filter(r=>r[j]&&!isNum(r[j])).length/d.length;
+  };
+  let hdr=-1,parts=null;
+  for(let i=0;i<Math.min(10,rows.length)&&!parts;i++){
+    const r=rows[i],r2=rows[i+1];
+    const tryParts=row=>{
+      const ho=find(row,'ho'),ten=find(row,'ten'),mid=find(row,'mid');
+      if(ho>=0&&ten>=0)return [ho,mid,ten].filter(x=>x>=0).sort((x,y)=>x-y);
+      return null;
+    };
+    // 1) Họ / (đệm) / Tên ở cùng một dòng
+    let p=tryParts(r);
+    if(p){parts=p;hdr=i;break}
+    const full=find(r,'full'),weak=find(r,'weak');
+    // 2) Tiêu đề hai tầng: "Họ và tên" gộp ô, dòng dưới là "Họ đệm" | "Tên"
+    if((full>=0||weak>=0)&&(p=tryParts(r2))){parts=p;hdr=i+1;break}
+    const j=full>=0?full:weak>=0?weak:-1;
+    if(j>=0){
+      // 3) "Họ và tên" gộp 2 ô nhưng không có tiêu đề con: cột bên phải để trống tiêu đề và có chữ
+      if(!r[j+1]&&(!r2||!r2[j+1]||isNum(r2[j+1])||textCol(j+1,i+1)>.6)&&textCol(j+1,i+1)>.6
+         &&rows.slice(i+1,i+41).filter(x=>x[j+1]).every(x=>x[j+1].split(' ').length<=2))
+        {parts=[j,j+1];hdr=i;break}
+      parts=[j];hdr=i;break;
     }
-    if(found)break;
+    // 4) Chỉ có cột "Họ ..." mà cột tên kế bên không có tiêu đề
+    const ho=find(r,'ho');
+    if(ho>=0&&!r[ho+1]&&textCol(ho+1,i+1)>.6){parts=[ho,ho+1];hdr=i;break}
+    const ten=find(r,'ten');
+    if(ten>=0){parts=ho>=0?[ho,ten]:[ten];hdr=i;break}
   }
-  if(found){
-    rows[hdr].forEach((c,j)=>{const l=c.toLowerCase();if(j===cName)return;
-      else if(cPre<0&&/(danh xưng|xưng hô|giới tính)/.test(l))cPre=j;
-      else if(cRole<0&&/(chức vụ|chức danh|đơn vị|cơ quan)/.test(l))cRole=j;});
-  }
-  if(cName<0){ // không có tiêu đề: chọn cột có nhiều chữ nhất, bỏ cột số thứ tự
-    const cols=Math.max(...rows.map(r=>r.length));let best=-1,score=-1;
+  let cPre=-1,cRole=-1;
+  if(parts){
+    for(let i=Math.max(0,hdr-1);i<=hdr;i++){
+      if(cPre<0)cPre=find(rows[i],'pre');
+      if(cRole<0)cRole=find(rows[i],'role');
+    }
+  } else { // không có tiêu đề: chọn cột có nhiều chữ nhất, bỏ cột số thứ tự
+    const cols=Math.max(...rows.map(r=>r.length));let best=0,score=-1;
     for(let j=0;j<cols;j++){const sc=rows.filter(r=>r[j]&&!isNum(r[j])).length;if(sc>score){score=sc;best=j}}
-    cName=best;
+    parts=[best];
+    // cột kế bên toàn từ đơn → nhiều khả năng là cột Tên tách rời
+    const nx=rows.filter(r=>r[best+1]);
+    if(nx.length>=rows.length*.8&&nx.every(r=>!isNum(r[best+1])&&r[best+1].split(' ').length===1)&&rows.every(r=>!r[best]||r[best].split(' ').length<=3))parts=[best,best+1];
   }
   const out=[];
   rows.slice(hdr+1).forEach(r=>{
-    let n=cleanName(r[cName]);if(!n||isNum(n))return;
-    if(/^(stt|họ và tên|họ tên|danh sách)/i.test(n))return;
+    let n=cleanName(parts.map(c=>r[c]||'').filter(Boolean).join(' '));
+    if(!n||isNum(n)||/^[\(\[]?\d+[\)\]]?(\s+[\(\[]?\d+[\)\]]?)*$/.test(n))return;
+    if(/^(stt|họ và tên|họ tên|danh sách|tổng cộng|tổng số|cộng|người lập|ghi chú)/i.test(n))return;
     let pre=cPre>=0?norm(r[cPre]):'';
-    if(/^nam$/i.test(pre))pre='Ông';else if(/^nữ$/i.test(pre))pre='Bà';
+    if(/^nam$/i.test(pre))pre='Ông';else if(/^nữ$/i.test(pre))pre='Bà';else if(/^x$/i.test(pre))pre='';
     if(pre&&!n.toLowerCase().startsWith(pre.toLowerCase()))n=pre+' '+n;
     const role=cRole>=0?norm(r[cRole]):'';
     out.push(role?n+' – '+role:n);
