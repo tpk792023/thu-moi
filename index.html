@@ -50,6 +50,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:14px
 .sw i+i{margin-left:-10px}
 .sw[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset;font-weight:600}
 label{display:flex;flex-direction:column;gap:5px;font-weight:500;font-size:13px}
+label.check{flex-direction:row;align-items:center;gap:8px;cursor:pointer}
+label.check input{width:18px;height:18px;accent-color:var(--accent);margin:0}
 label small{color:var(--muted);font-weight:400}
 input[type=text],textarea{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;box-sizing:border-box}
 textarea{resize:vertical;min-height:64px}
@@ -77,6 +79,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .card[data-frame="song"] .c-in{inset:128px 66px 128px}
 .card[data-frame="vom"] .c-in{inset:118px 80px 60px}
 .card[data-frame="vui"] .c-in{inset:92px 76px 84px}
+.card.qh .c-in{top:112px}
+.card.qh[data-frame="hoa"] .c-in,.card.qh[data-frame="goc"] .c-in{top:128px}
+.card.qh[data-frame="vom"] .c-in{top:180px}
+.c-head{display:grid;grid-template-columns:minmax(0,44fr) minmax(0,56fr);gap:10px;width:100%;font-family:var(--f-ui);font-size:calc(10.5px*var(--fs));line-height:1.35;margin-bottom:calc(4px*var(--fs))}
+.c-head>div{display:flex;flex-direction:column;align-items:center;text-align:center}
+.c-head .h-l span{font-weight:700;white-space:pre-line;text-transform:uppercase}
+.c-head .h-r b{font-weight:700;white-space:nowrap;font-size:calc(10.2px*var(--fs))}
+.c-head .h-r span{font-weight:600;font-size:calc(11.5px*var(--fs))}
+.c-head .rule{display:block;width:44%;height:0;border-top:1px solid var(--c-ink);margin-top:4px}
+.c-from{font-family:var(--f-ui);font-weight:700;font-size:calc(13px*var(--fs));letter-spacing:.04em;white-space:pre-line;line-height:1.4;color:var(--c-ink)}
 .c-unit{font-family:var(--f-ui);font-weight:600;font-size:calc(13px*var(--fs));letter-spacing:.14em;text-transform:uppercase;white-space:pre-line}
 .c-title{font-family:var(--f-title);font-weight:700;font-size:calc(58px*var(--fs));line-height:1.05;letter-spacing:.07em;color:var(--c-primary);margin-top:calc(4px*var(--fs))}
 .c-sub{font-family:var(--f-script);font-weight:700;font-size:calc(27px*var(--fs));line-height:1.2;color:var(--c-ink);text-wrap:balance;max-width:420px}
@@ -143,13 +155,15 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     </div>
     <div class="box">
       <h2>3 · Nội dung</h2>
-      <label>Đơn vị / người mời (dòng trên cùng)
-        <input type="text" id="f-donVi"></label>
+      <label>Đơn vị (góc trên bên trái)
+        <textarea id="f-donVi" rows="3"></textarea></label>
+      <label class="check"><input type="checkbox" id="f-qh"> Có Quốc hiệu – Tiêu ngữ (mẫu hành chính)</label>
       <div class="row2">
         <label>Tiêu đề<input type="text" id="f-tieuDe"></label>
         <label>Cỡ chữ <small id="fs-val">100%</small><input type="range" id="f-fs" min="80" max="115" step="1" value="100"></label>
       </div>
-      <label>Chủ đề sự kiện<input type="text" id="f-chuDe"></label>
+      <label>Chủ đề sự kiện <small>Để trống nếu không cần</small><input type="text" id="f-chuDe"></label>
+      <label>Người mời <small>In phía trên dòng "Trân trọng kính mời"; để trống nếu không cần</small><textarea id="f-nguoiMoi" rows="2"></textarea></label>
       <label>Kính gửi <small>Mỗi dòng một người. Nhiều dòng sẽ tạo nhiều thư, xem lần lượt bằng nút ‹ ›.</small>
         <textarea id="f-kinhGui" rows="3"></textarea></label>
       <div class="upload">
@@ -194,14 +208,19 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <div id="frameHost"></div>
         <div class="c-in">
           <div class="c-unit" data-k="donVi"></div>
+          <div class="c-head" id="c-head" hidden>
+            <div class="h-l"><span data-k="donVi"></span><i class="rule"></i></div>
+            <div class="h-r"><b>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><span>Độc lập – Tự do – Hạnh phúc</span><i class="rule"></i></div>
+          </div>
           <div class="c-title" data-k="tieuDe"></div>
-          <div class="c-sub" data-k="chuDe"></div>
+          <div class="c-sub" data-k="chuDe" data-opt></div>
           <svg class="c-orn" width="190" height="16" viewBox="0 0 190 16" aria-hidden="true"><path d="M4 8H76M114 8H186" stroke="currentColor" stroke-width="1.3"/><path d="M95 1L102 8L95 15L88 8Z" fill="currentColor"/><circle cx="81" cy="8" r="2.2" fill="currentColor"/><circle cx="109" cy="8" r="2.2" fill="currentColor"/></svg>
-          <div class="c-to"><span>Trân trọng kính mời</span><b id="c-name"></b><em id="c-role" hidden></em></div>
+          <div class="c-from" data-k="nguoiMoi" data-opt></div>
+          <div class="c-to"><span>Trân trọng kính mời:</span><b id="c-name"></b><em id="c-role" hidden></em></div>
           <p class="c-body" data-k="noiDung"></p>
           <dl class="c-meta">
             <dt>Thời gian</dt><dd data-k="thoiGian"></dd>
-            <dt>Địa điểm</dt><dd data-k="diaDiem"></dd>
+            <dt id="dt-dd">Địa điểm</dt><dd data-k="diaDiem" data-opt></dd>
           </dl>
           <p class="c-close" data-k="loiKet"></p>
           <div class="c-sign">
@@ -251,10 +270,12 @@ const FRAMES=[
 const SCHOOL_SIGN='HIỆU TRƯỞNG';
 const THEMES=[
  {id:'nhagiao',name:'Ngày Nhà giáo 20/11',pal:'son',frame:'hoa',f:{
-  tieuDe:'THƯ MỜI',chuDe:'Kỷ niệm 44 năm Ngày Nhà giáo Việt Nam 20/11',
-  noiDung:'Nhân dịp kỷ niệm 44 năm Ngày Nhà giáo Việt Nam (20/11/1982 – 20/11/2026), nhà trường tổ chức Lễ mít tinh kỷ niệm và tôn vinh các thầy giáo, cô giáo. Trân trọng kính mời Quý vị đến dự.',
-  thoiGian:'7 giờ 00, thứ Sáu, ngày 20/11/2026',diaDiem:'Hội trường nhà trường',
-  loiKet:'Sự hiện diện của Quý vị là niềm vinh dự và nguồn động viên lớn lao đối với thầy và trò nhà trường.',chucVu:SCHOOL_SIGN}},
+  tieuDe:'THƯ MỜI',chuDe:'',
+  nguoiMoi:'HIỆU TRƯỞNG\nTRƯỜNG TIỂU HỌC VÀ TRUNG HỌC CƠ SỞ ĐA PHƯỚC',
+  noiDung:'Đến tại Trường Tiểu học và THCS Đa Phước, Ấp Hà Bao I, xã Vĩnh Hậu, An Giang\nTham dự ngày Nhà giáo Việt Nam 20/11.',
+  thoiGian:'7 giờ 30 phút ngày 20 tháng 11 năm 2026',diaDiem:'',
+  loiKet:'Rất hân hạnh được đón tiếp quý vị.',
+  noiNgay:'Vĩnh Hậu, ngày 17 tháng 11 năm 2026',chucVu:SCHOOL_SIGN,nguoiKy:'Nguyễn Thị Mỹ Hương'}},
  {id:'khaigiang',name:'Lễ khai giảng',pal:'navy',frame:'goc',f:{
   tieuDe:'THƯ MỜI',chuDe:'Lễ khai giảng năm học 2027 – 2028',
   noiDung:'Hòa chung không khí cả nước bước vào năm học mới, nhà trường long trọng tổ chức Lễ khai giảng năm học 2027 – 2028. Trân trọng kính mời Quý vị đến dự và chung vui cùng thầy trò nhà trường.',
@@ -301,9 +322,9 @@ const THEMES=[
   thoiGian:'18 giờ 30, ngày ..... tháng ..... năm 2026',diaDiem:'....................',
   loiKet:'Rất mong bạn đến sớm nhé!',chucVu:'NGƯỜI MỜI'}}
 ];
-const SHARED={donVi:'TRƯỜNG THCS ........................',kinhGui:'Thầy Nguyễn Văn An (ví dụ)\nCô Trần Thị Bình (ví dụ)',noiNgay:'............, ngày ..... tháng ..... năm 2026',nguoiKy:'........................'};
-const KEYS=['donVi','tieuDe','chuDe','kinhGui','noiDung','thoiGian','diaDiem','loiKet','noiNgay','chucVu','nguoiKy'];
-const STORE='xuongThuMoi.v1';
+const SHARED={donVi:'UBND XÃ VĨNH HẬU\nTRƯỜNG TIỂU HỌC VÀ TRUNG HỌC CƠ SỞ\nĐA PHƯỚC',kinhGui:'',noiNgay:'Vĩnh Hậu, ngày ..... tháng ..... năm 2026',nguoiKy:'Nguyễn Thị Mỹ Hương',nguoiMoi:'',qh:true};
+const KEYS=['donVi','tieuDe','chuDe','nguoiMoi','kinhGui','noiDung','thoiGian','diaDiem','loiKet','noiNgay','chucVu','nguoiKy'];
+const STORE='xuongThuMoi.v2';
 
 let state;
 function fresh(){const t=THEMES[0];return {theme:t.id,pal:t.pal,frame:t.frame,fs:100,idx:0,f:Object.assign({},SHARED,t.f)}}
@@ -402,7 +423,7 @@ function syncPressed(){
   document.querySelectorAll('[data-f]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===state.frame));
   document.querySelectorAll('[data-p]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===state.pal));
 }
-function fillInputs(){KEYS.forEach(k=>{$('f-'+k).value=state.f[k]||''});$('f-fs').value=state.fs;$('fs-val').textContent=state.fs+'%'}
+function fillInputs(){KEYS.forEach(k=>{$('f-'+k).value=state.f[k]||''});$('f-qh').checked=state.f.qh!==false;$('f-fs').value=state.fs;$('fs-val').textContent=state.fs+'%'}
 function names(){return (state.f.kinhGui||'').split('\n').map(s=>s.trim()).filter(Boolean)}
 
 /* ---------- vẽ thư ---------- */
@@ -412,7 +433,9 @@ function render(){
   card.style.setProperty('--c-primary',p.primary);card.style.setProperty('--c-accent',p.accent);
   card.style.setProperty('--c-soft',p.soft);card.style.setProperty('--fs',state.fs/100);
   $('frameHost').innerHTML=frameSVG(state.frame,p);card.dataset.frame=state.frame;
-  card.querySelectorAll('[data-k]').forEach(el=>{el.textContent=state.f[el.dataset.k]||''});
+  card.querySelectorAll('[data-k]').forEach(el=>{el.textContent=state.f[el.dataset.k]||'';if(el.hasAttribute('data-opt'))el.hidden=!el.textContent.trim()});
+  $('dt-dd').hidden=!(state.f.diaDiem||'').trim();
+  const qh=state.f.qh!==false;card.classList.toggle('qh',qh);$('c-head').hidden=!qh;card.querySelector('.c-unit').hidden=qh;
   const n=names();if(state.idx>=n.length)state.idx=Math.max(0,n.length-1);
   const nm=n.length?n[state.idx]:'....................................';
   const cut=nm.indexOf(' – '),who=cut>0?nm.slice(0,cut):nm,role=cut>0?nm.slice(cut+3):'';
@@ -429,6 +452,7 @@ function fit(){const w=$('stage').clientWidth,s=Math.min(1,w/W);$('card').style.
 function applyTheme(id){
   const t=THEMES.find(x=>x.id===id);if(!t)return;
   state.theme=id;state.pal=t.pal;state.frame=t.frame;Object.assign(state.f,t.f);
+  state.f.nguoiMoi=t.f.nguoiMoi||'';state.f.qh=!['cuoi','sinhnhat'].includes(id);
   fillInputs();drawFrameButtons();render();
 }
 document.addEventListener('click',e=>{
@@ -438,6 +462,7 @@ document.addEventListener('click',e=>{
   if(p){state.pal=p.dataset.p;drawFrameButtons();render()}
 });
 KEYS.forEach(k=>$('f-'+k).addEventListener('input',e=>{state.f[k]=e.target.value;render()}));
+$('f-qh').addEventListener('change',e=>{state.f.qh=e.target.checked;render()});
 $('f-fs').addEventListener('input',e=>{state.fs=+e.target.value;$('fs-val').textContent=state.fs+'%';render()});
 $('prev').onclick=()=>{state.idx--;render()};
 $('next').onclick=()=>{state.idx++;render()};
