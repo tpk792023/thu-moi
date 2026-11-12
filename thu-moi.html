@@ -596,11 +596,24 @@ async function cleanSignature(file){
   if(x1<0)throw new Error('empty');
   cx.putImageData(d,0,0);const p=6;x0=Math.max(0,x0-p);y0=Math.max(0,y0-p);x1=Math.min(w-1,x1+p);y1=Math.min(h-1,y1+p);
   const out=document.createElement('canvas');out.width=x1-x0+1;out.height=y1-y0+1;out.getContext('2d').drawImage(cv,x0,y0,out.width,out.height,0,0,out.width,out.height);
+  deepenRed(out);
   return out.toDataURL('image/png');
+}
+/* Mộc đỏ: nét đỏ nhạt/hồng → đỏ son đậm, rõ nét; nét mực xanh/đen giữ nguyên */
+function deepenRed(cv){
+  const cx=cv.getContext('2d'),d=cx.getImageData(0,0,cv.width,cv.height),px=d.data;
+  for(let i=0;i<px.length;i+=4){if(!px[i+3])continue;const r=px[i],g=px[i+1],b=px[i+2];
+    if(r>g+25&&r>b+15&&px[i+3]>25){px[i]=Math.min(r,205);px[i+1]=Math.round(g*.18);px[i+2]=Math.round(b*.25);px[i+3]=Math.min(255,Math.round(px[i+3]*2.2))}}
+  cx.putImageData(d,0,0);
+}
+async function deepenStored(){
+  const im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=state.sig});
+  const cv=document.createElement('canvas');cv.width=im.width;cv.height=im.height;cv.getContext('2d').drawImage(im,0,0);
+  deepenRed(cv);state.sig=cv.toDataURL('image/png');state.sigRed=1;render();
 }
 $('f-sig').addEventListener('change',async e=>{
   const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;const st=$('sig-status');st.textContent='Đang xử lý ảnh chữ ký…';
-  try{state.sig=await cleanSignature(f);state.sigS=100;state.sx=0;state.sy=0;sigPosLabel();
+  try{state.sig=await cleanSignature(f);state.sigRed=1;state.sigS=100;state.sx=0;state.sy=0;sigPosLabel();
     /* ảnh cao (có mộc tròn, nhiều dòng chữ) thì tự hiểu là ảnh đầy đủ; chữ ký thường thì dẹt và dài */
     const im=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=state.sig});state.sigFull=im.height/im.width>.42;$('f-sigS').value=state.sigS;$('sigS-val').textContent=state.sigS+'%';render();
     st.textContent='Đã chèn chữ ký. Kéo "Cỡ chữ ký" nếu muốn to hoặc nhỏ hơn.';
@@ -620,6 +633,8 @@ $('f-sx').addEventListener('input',e=>{state.sx=+e.target.value;sigPosLabel();re
 $('f-sy').addEventListener('input',e=>{state.sy=+e.target.value;sigPosLabel();render()});
 $('sigCenter').onclick=()=>{state.sx=0;state.sy=0;sigPosLabel();render()};
 sigPosLabel();
+/* chữ ký đã lưu từ bản trước: làm đậm mộc đỏ một lần */
+if(state.sig&&!state.sigRed)deepenStored().catch(()=>{});
 $('f-allT').checked=!!state.allT;
 $('f-allT').addEventListener('change',e=>{state.allT=e.target.checked;render();reflowAfterFonts()});
 $('f-hy').addEventListener('input',e=>{state.hy=+e.target.value;hyLabel();render()});
