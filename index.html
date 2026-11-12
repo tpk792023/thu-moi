@@ -122,7 +122,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .c-sign i{font-size:calc(13.5px*var(--fs))}
 .c-sign .role{font-family:var(--f-ui);font-weight:700;font-size:calc(13px*var(--fs));letter-spacing:.06em;text-transform:uppercase;white-space:pre-line;line-height:1.35}
 .c-sign .gap{height:calc(50px*var(--fs));position:relative;width:100%}
-.c-sign .gap img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:calc(64px*var(--sig,1)*var(--fs));width:auto;max-width:100%;object-fit:contain}
+.c-sign .gap img{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + var(--sx,0px)),calc(-50% + var(--sy,0px)));height:calc(64px*var(--sig,1)*var(--fs));width:auto;max-width:100%;object-fit:contain}
 .card.has-sig .c-sign .gap{height:calc(max(50px,58px*var(--sig,1))*var(--fs))}
 #sig-tools{display:flex;flex-direction:column;gap:8px}
 .c-sign .name{font-weight:600;font-size:calc(16px*var(--fs))}
@@ -177,6 +177,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <label>Tên khách mời<select id="f-fsc"></select></label>
         <label>Nội dung<select id="f-fb"></select></label>
       </div>
+      <div>
+        <label class="check"><input type="checkbox" id="f-allT"> <span style="font-family:'Times New Roman',Tinos,serif;font-size:15px">Dùng Times New Roman cho toàn bộ thư</span></label>
+      </div>
       <label class="check"><input type="checkbox" id="f-tc"> Tô màu chữ theo khung (tên trường, người mời, người ký)</label>
       <label>Vị trí Đơn vị &amp; Quốc hiệu <small id="hy-val">0</small><input type="range" id="f-hy" min="-40" max="40" step="2" value="0">
         <small>Kéo sang trái để đưa lên trên, sang phải để hạ xuống.</small>
@@ -223,6 +226,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <p class="up-hint">Ký trên giấy trắng bằng bút mực xanh hoặc đen, chụp ảnh rõ nét rồi chọn ảnh đó. Nền trắng sẽ tự được xóa cho trong suốt.</p>
         <div id="sig-tools" hidden>
           <label>Cỡ chữ ký <small id="sigS-val">100%</small><input type="range" id="f-sigS" min="50" max="160" step="5" value="100"></label>
+          <label>Chữ ký sang trái / phải <small id="sx-val">giữa</small><input type="range" id="f-sx" min="-120" max="120" step="2" value="0"></label>
+          <label>Chữ ký lên / xuống <small id="sy-val">giữa</small><input type="range" id="f-sy" min="-40" max="40" step="2" value="0"></label>
+          <button class="btn" type="button" id="sigCenter">Đặt chữ ký vào giữa</button>
           <button class="btn" type="button" id="sigDel">Bỏ chữ ký</button>
         </div>
         <p class="status" id="sig-status" role="status"></p>
@@ -387,6 +393,7 @@ const THEME_FONTS={nhagiao:['playfair','dancing','lora'],khaigiang:['montserrat'
   tongket:['cormorant','greatvibes','cormorant'],hoinghi:['tinos','charm','tinos'],tatnien:['lobster','dancing','lora'],
   thanhlap:['cormorant','greatvibes','lora'],phunu:['playfair','greatvibes','cormorant'],cuoi:['cormorant','greatvibes','cormorant'],
   sinhnhat:['lobster','pacifico','bevn']};
+const TNR={name:'Times New Roman',css:'"Times New Roman", Tinos, Times, serif',w:700};
 /* Mức kéo đầu thư lên tối đa của từng khung trước khi chạm hình trang trí (đã đo) */
 const HYMIN={codien:-22,hoa:-6,kyha:-40,la:-40,goc:-12,deco:-14,song:-6,vom:-8,vui:-40};
 const themeFont=id=>{const a=THEME_FONTS[id]||THEME_FONTS.nhagiao;return {t:a[0],s:a[1],b:a[2]}};
@@ -510,7 +517,11 @@ function render(){
   card.style.setProperty('--c-paper',p.paper);card.style.setProperty('--c-ink',p.ink);
   card.style.setProperty('--c-primary',p.primary);card.style.setProperty('--c-accent',p.accent);
   card.style.setProperty('--c-soft',p.soft);card.style.setProperty('--fs',state.fs/100);
-  const ft=FONTS[state.font.t]||FONTS.playfair,fsc=FONTS[state.font.s]||FONTS.dancing,fb=FONTS[state.font.b]||FONTS.lora;
+  let ft=FONTS[state.font.t]||FONTS.playfair,fsc=FONTS[state.font.s]||FONTS.dancing,fb=FONTS[state.font.b]||FONTS.lora;
+  /* Times New Roman cho toàn bộ thư (kể cả đầu thư, chức vụ, người ký) */
+  if(state.allT){ft=fsc=fb=TNR;card.style.setProperty('--f-ui',TNR.css)}else card.style.removeProperty('--f-ui');
+  ['f-ft','f-fsc','f-fb'].forEach(id=>$(id).disabled=!!state.allT);
+  card.style.setProperty('--sx',(state.sx||0)+'px');card.style.setProperty('--sy',(state.sy||0)+'px');
   card.style.setProperty('--f-title',ft.css);card.style.setProperty('--w-t',ft.w);
   card.style.setProperty('--f-script',fsc.css);card.style.setProperty('--w-s',fsc.w);
   const hy=Math.max(state.hy,HYMIN[state.frame]??-40);
@@ -594,6 +605,17 @@ $('f-sig').addEventListener('change',async e=>{
 $('f-sigS').addEventListener('input',e=>{state.sigS=+e.target.value;$('sigS-val').textContent=state.sigS+'%';render()});
 $('sigDel').onclick=()=>{state.sig='';$('sig-status').textContent='Đã bỏ chữ ký.';render()};
 if(state.sigS){$('f-sigS').value=state.sigS;$('sigS-val').textContent=state.sigS+'%'}
+function sigPosLabel(){
+  const sx=state.sx||0,sy=state.sy||0;$('f-sx').value=sx;$('f-sy').value=sy;
+  $('sx-val').textContent=sx===0?'giữa':sx<0?`trái ${-sx}`:`phải ${sx}`;
+  $('sy-val').textContent=sy===0?'giữa':sy<0?`lên ${-sy}`:`xuống ${sy}`;
+}
+$('f-sx').addEventListener('input',e=>{state.sx=+e.target.value;sigPosLabel();render()});
+$('f-sy').addEventListener('input',e=>{state.sy=+e.target.value;sigPosLabel();render()});
+$('sigCenter').onclick=()=>{state.sx=0;state.sy=0;sigPosLabel();render()};
+sigPosLabel();
+$('f-allT').checked=!!state.allT;
+$('f-allT').addEventListener('change',e=>{state.allT=e.target.checked;render();reflowAfterFonts()});
 $('f-hy').addEventListener('input',e=>{state.hy=+e.target.value;hyLabel();render()});
 $('f-fs').addEventListener('input',e=>{state.fs=+e.target.value;$('fs-val').textContent=state.fs+'%';render()});
 $('prev').onclick=()=>{state.idx--;render()};
