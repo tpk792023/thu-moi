@@ -124,6 +124,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .c-sign .gap{height:calc(50px*var(--fs));position:relative;width:100%}
 .c-sign .gap img{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + var(--sx,0px)),calc(-50% + var(--sy,0px)));height:calc(64px*var(--sig,1)*var(--fs));width:auto;max-width:100%;object-fit:contain}
 .card.has-sig .c-sign .gap{height:calc(max(50px,58px*var(--sig,1))*var(--fs))}
+/* Ảnh đã có sẵn chức vụ + chữ ký + mộc + họ tên: ẩn chữ đánh máy, ảnh lớn hơn */
+.card.sig-full .c-sign .role,.card.sig-full .c-sign .name{display:none}
+.card.sig-full .c-sign .gap{height:calc(150px*var(--sig,1)*var(--fs));margin-top:calc(4px*var(--fs))}
+.card.sig-full .c-sign .gap img{height:calc(150px*var(--sig,1)*var(--fs))}
 #sig-tools{display:flex;flex-direction:column;gap:8px}
 .c-sign .name{font-weight:600;font-size:calc(16px*var(--fs))}
 
@@ -229,6 +233,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
           <label>Chữ ký sang trái / phải <small id="sx-val">giữa</small><input type="range" id="f-sx" min="-120" max="120" step="2" value="0"></label>
           <label>Chữ ký lên / xuống <small id="sy-val">giữa</small><input type="range" id="f-sy" min="-40" max="40" step="2" value="0"></label>
           <button class="btn" type="button" id="sigCenter">Đặt chữ ký vào giữa</button>
+          <label class="check"><input type="checkbox" id="f-sigFull"> Ảnh đã có sẵn chức vụ, mộc và họ tên (ẩn chữ "Hiệu trưởng" và tên đánh máy)</label>
           <button class="btn" type="button" id="sigDel">Bỏ chữ ký</button>
         </div>
         <p class="status" id="sig-status" role="status"></p>
@@ -529,6 +534,7 @@ function render(){
   $('hy-max').hidden=hy===state.hy;
   const sg=$('c-sig');if(state.sig){if(sg.getAttribute('src')!==state.sig)sg.src=state.sig;sg.hidden=false}else{sg.hidden=true;sg.removeAttribute('src')}
   card.style.setProperty('--sig',(state.sigS||100)/100);$('sig-tools').hidden=!state.sig;card.classList.toggle('has-sig',!!state.sig);
+  card.classList.toggle('sig-full',!!(state.sig&&state.sigFull));$('f-sigFull').checked=!!state.sigFull;
   const nn=card.querySelector('[data-k="noiNgay"]');nn.style.fontStyle=state.nn.i?'italic':'normal';nn.style.fontWeight=state.nn.b?'700':'400';
   card.classList.toggle('tc',!!state.tc);
   $('frameHost').innerHTML=frameSVG(state.frame,p);card.dataset.frame=state.frame;
@@ -601,12 +607,15 @@ async function cleanSignature(file){
 }
 $('f-sig').addEventListener('change',async e=>{
   const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;const st=$('sig-status');st.textContent='Đang xử lý ảnh chữ ký…';
-  try{state.sig=await cleanSignature(f);if(!state.sigS)state.sigS=100;$('f-sigS').value=state.sigS;$('sigS-val').textContent=state.sigS+'%';render();
+  try{state.sig=await cleanSignature(f);state.sigS=100;state.sx=0;state.sy=0;sigPosLabel();
+    /* ảnh cao (có mộc tròn, nhiều dòng chữ) thì tự hiểu là ảnh đầy đủ; chữ ký thường thì dẹt và dài */
+    const im=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=state.sig});state.sigFull=im.height/im.width>.42;$('f-sigS').value=state.sigS;$('sigS-val').textContent=state.sigS+'%';render();
     st.textContent='Đã chèn chữ ký. Kéo "Cỡ chữ ký" nếu muốn to hoặc nhỏ hơn.';
     try{localStorage.setItem(STORE,JSON.stringify(state))}catch(err){st.textContent='Đã chèn chữ ký. Trình duyệt này không cho lưu lại, nên nếu tải lại trang thầy cần chèn lại chữ ký.'}}
   catch(err){st.textContent='Không đọc được ảnh chữ ký. Thầy thử ảnh JPG hoặc PNG khác, nét chữ đậm trên nền trắng.'}
 });
 $('f-sigS').addEventListener('input',e=>{state.sigS=+e.target.value;$('sigS-val').textContent=state.sigS+'%';render()});
+$('f-sigFull').addEventListener('change',e=>{state.sigFull=e.target.checked;render()});
 $('sigDel').onclick=()=>{state.sig='';$('sig-status').textContent='Đã bỏ chữ ký.';render()};
 if(state.sigS){$('f-sigS').value=state.sigS;$('sigS-val').textContent=state.sigS+'%'}
 function sigPosLabel(){
