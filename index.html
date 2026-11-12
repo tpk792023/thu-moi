@@ -100,7 +100,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .card.tc .c-sign .name{color:var(--c-primary)}
 .card.tc .c-head .rule{border-color:var(--c-accent)}.c-head{display:grid;grid-template-columns:minmax(0,44fr) minmax(0,56fr);gap:10px;width:100%;font-family:var(--f-ui);font-size:calc(10.5px*var(--fs));line-height:1.35;margin-bottom:calc(4px*var(--fs))}
 .c-head>div{display:flex;flex-direction:column;align-items:center;text-align:center}
-.c-head .h-l span{font-weight:700;white-space:pre-line;text-transform:uppercase}
+.c-head .h-l span{font-weight:700;white-space:pre;text-transform:uppercase;display:block;max-width:100%}
 .c-head .h-r b{font-weight:700;white-space:nowrap;font-size:calc(10.2px*var(--fs))}
 .c-head .h-r span{font-weight:600;font-size:calc(11.5px*var(--fs))}
 .c-head .rule{display:block;width:44%;height:0;border-top:1px solid var(--c-ink);margin-top:4px}
@@ -548,6 +548,10 @@ function render(){
 /* Nội dung dài hoặc phông chữ to: tự giảm cỡ chữ từng chút cho vừa khung (không vượt cỡ thầy đã chọn) */
 function shrinkToFit(){
   const card=$('card'),ci=card.querySelector('.c-in');let k=state.fs/100;
+  /* Đơn vị: giữ đúng từng dòng thầy gõ (không tự xuống dòng); dòng dài thì thu nhỏ chữ cho vừa cột */
+  const un=card.querySelector('.c-head .h-l span');un.style.fontSize='';
+  if(!$('c-head').hidden){let px=parseFloat(getComputedStyle(un).fontSize);
+    for(let i=0;i<14&&un.scrollWidth>un.clientWidth+1&&px>7;i++){px-=.4;un.style.fontSize=px+'px'}}
   card.classList.add('measure');
   const need=()=>{let b=0;for(const c of ci.children)if(!c.hidden&&c.offsetParent)b=Math.max(b,c.offsetTop+c.offsetHeight);return b};
   for(let i=0;i<20&&need()>ci.clientHeight&&k>.62;i++){k-=.02;card.style.setProperty('--fs',k)}
